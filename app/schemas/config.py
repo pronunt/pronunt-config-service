@@ -34,6 +34,16 @@ class DependencyUpsertRequest(BaseModel):
     depends_on: list[str] = Field(default_factory=list)
 
 
+class ConfigImportRequest(BaseModel):
+    services: list[ServiceConfigUpsertRequest] = Field(default_factory=list)
+    dependencies: list[DependencyUpsertRequest] = Field(default_factory=list)
+
+
+class ConfigImportResponse(BaseModel):
+    imported_services: int
+    imported_dependency_sets: int
+
+
 class DependencyResponse(BaseModel):
     id: str
     service_name: str

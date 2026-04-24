@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, status
 
 from app.core.auth import AuthContext, require_roles
 from app.schemas.config import (
+    ConfigImportRequest,
+    ConfigImportResponse,
     DependencyResponse,
     DependencyUpsertRequest,
     ImpactResponse,
@@ -63,6 +65,15 @@ def upsert_dependencies(
     service: ConfigServiceDependency,
 ) -> DependencyResponse:
     return service.upsert_dependencies(payload)
+
+
+@router.post("/import", status_code=status.HTTP_201_CREATED)
+def import_graph(
+    payload: ConfigImportRequest,
+    _: ConfigAccessDependency,
+    service: ConfigServiceDependency,
+) -> ConfigImportResponse:
+    return service.import_graph(payload)
 
 
 @router.get("/impact/{service_name}")

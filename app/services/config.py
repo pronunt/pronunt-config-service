@@ -8,6 +8,8 @@ from app.core.database import get_dependency_collection, get_service_collection
 from app.core.exceptions import AppException
 from app.core.settings import Settings, get_settings
 from app.schemas.config import (
+    ConfigImportRequest,
+    ConfigImportResponse,
     DependencyResponse,
     DependencyUpsertRequest,
     ImpactResponse,
@@ -60,6 +62,7 @@ class ConfigService:
     def upsert_dependencies(self, payload: DependencyUpsertRequest) -> DependencyResponse:
         self._ensure_service_exists(payload.service_name)
         sorted_dependencies = sorted(set(payload.depends_on))
+        self._ensure_services_exist(sorted_dependencies)
         self.dependency_collection.update_one(
             {"service_name": payload.service_name},
             {"$set": {"service_name": payload.service_name, "depends_on": sorted_dependencies}},
@@ -67,6 +70,16 @@ class ConfigService:
         )
         saved = self.dependency_collection.find_one({"service_name": payload.service_name})
         return self._to_dependency_response(saved)
+
+    def import_graph(self, payload: ConfigImportRequest) -> ConfigImportResponse:
+        for service in payload.services:
+            self.upsert_service(service)
+        for dependency in payload.dependencies:
+            self.upsert_dependencies(dependency)
+        return ConfigImportResponse(
+            imported_services=len(payload.services),
+            imported_dependency_sets=len(payload.dependencies),
+        )
 
     def get_impact(self, service_name: str) -> ImpactResponse:
         self._ensure_service_exists(service_name)
@@ -85,6 +98,10 @@ class ConfigService:
     def _ensure_service_exists(self, service_name: str) -> None:
         if not self.service_collection.find_one({"service_name": service_name}, {"_id": 1}):
             self._raise_service_not_found(service_name)
+
+    def _ensure_services_exist(self, service_names: list[str]) -> None:
+        for service_name in service_names:
+            self._ensure_service_exists(service_name)
 
     def _raise_service_not_found(self, service_name: str) -> None:
         raise AppException(

@@ -1,6 +1,6 @@
 from app.core.exceptions import AppException
 from app.core.settings import Settings
-from app.schemas.config import DependencyUpsertRequest, ServiceConfigUpsertRequest
+from app.schemas.config import ConfigImportRequest, DependencyUpsertRequest, ServiceConfigUpsertRequest
 from app.services.config import ConfigService
 
 
@@ -126,3 +126,33 @@ def test_impact_returns_direct_and_downstream_services() -> None:
     assert impact.service_name == "pronunt-worker-service"
     assert impact.direct_dependencies == ["pronunt-aggregator-service"]
     assert impact.downstream_services == ["pronunt-frontend-service"]
+
+
+def test_import_graph_creates_services_and_dependencies() -> None:
+    service = ConfigService(FakeCollection(), FakeCollection(), Settings(_env_file=None, allow_unsafe_dev_auth=True))
+
+    result = service.import_graph(
+        ConfigImportRequest(
+            services=[
+                ServiceConfigUpsertRequest(
+                    service_name="pronunt-aggregator-service",
+                    repository_full_name="pronunt/pronunt-aggregator-service",
+                    display_name="Aggregator",
+                ),
+                ServiceConfigUpsertRequest(
+                    service_name="pronunt-worker-service",
+                    repository_full_name="pronunt/pronunt-worker-service",
+                    display_name="Worker",
+                ),
+            ],
+            dependencies=[
+                DependencyUpsertRequest(
+                    service_name="pronunt-worker-service",
+                    depends_on=["pronunt-aggregator-service"],
+                )
+            ],
+        )
+    )
+
+    assert result.imported_services == 2
+    assert result.imported_dependency_sets == 1
