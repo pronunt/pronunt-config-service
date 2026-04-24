@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pronunt-config-service
+  namespace: prism
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pronunt-config-service
+  template:
+    metadata:
+      labels:
+        app: pronunt-config-service
+    spec:
+      containers:
+        - name: pronunt-config-service
+          image: ghcr.io/pronunt/pronunt-config-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: pronunt-config-service-config
+            - secretRef:
+                name: pronunt-config-service-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
