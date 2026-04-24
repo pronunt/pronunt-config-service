@@ -1,7 +1,0 @@
-apiVersion: v2
-name: pronunt-config-service
-description: Helm chart for pronunt-config-service
-type: application
-version: 0.1.0
-appVersion: "0.1.0"
-
