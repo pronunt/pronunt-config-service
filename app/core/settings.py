@@ -16,6 +16,10 @@ class Settings(BaseSettings):
 
     request_id_header: str = "X-Request-ID"
     http_timeout_seconds: float = 10.0
+    mongodb_uri: str = "mongodb://localhost:27017"
+    mongodb_database: str = "pronunt"
+    mongodb_service_collection: str = "config_services"
+    mongodb_dependency_collection: str = "config_dependencies"
 
     auth_enabled: bool = False
     allow_unsafe_dev_auth: bool = True
@@ -29,6 +33,14 @@ class Settings(BaseSettings):
 
         if self.http_timeout_seconds <= 0:
             errors.append("HTTP_TIMEOUT_SECONDS must be greater than 0.")
+        if not self.mongodb_uri:
+            errors.append("MONGODB_URI is required.")
+        if not self.mongodb_database:
+            errors.append("MONGODB_DATABASE is required.")
+        if not self.mongodb_service_collection:
+            errors.append("MONGODB_SERVICE_COLLECTION is required.")
+        if not self.mongodb_dependency_collection:
+            errors.append("MONGODB_DEPENDENCY_COLLECTION is required.")
 
         if self.auth_enabled:
             if not self.keycloak_issuer:
