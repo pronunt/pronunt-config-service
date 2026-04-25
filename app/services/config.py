@@ -12,6 +12,8 @@ from app.schemas.config import (
     ConfigImportResponse,
     DependencyResponse,
     DependencyUpsertRequest,
+    ImpactDetailResponse,
+    ImpactDirection,
     ImpactResponse,
     ServiceConfigListResponse,
     ServiceConfigResponse,
@@ -87,12 +89,80 @@ class ConfigService:
             "service_name": service_name,
             "depends_on": [],
         }
-        downstream_cursor = self.dependency_collection.find({"depends_on": service_name}).sort("service_name", ASCENDING)
-        downstream_services = [document["service_name"] for document in downstream_cursor]
+        direct_dependencies = sorted(dependency_document.get("depends_on", []))
+        reverse_graph = self._build_reverse_graph()
+        downstream_paths = self._build_downstream_paths(service_name, reverse_graph)
+        downstream_services = sorted(path[-1] for path in downstream_paths.values())
+
+        impact_details = [
+            ImpactDetailResponse(
+                service_name=dependency_name,
+                relationship=ImpactDirection.dependency,
+                path=[service_name, dependency_name],
+                explanation=f"{service_name} directly depends on {dependency_name}.",
+            )
+            for dependency_name in direct_dependencies
+        ]
+        impact_details.extend(
+            ImpactDetailResponse(
+                service_name=downstream_name,
+                relationship=ImpactDirection.downstream,
+                path=path,
+                explanation=self._build_downstream_explanation(path),
+            )
+            for downstream_name, path in sorted(downstream_paths.items())
+        )
+
         return ImpactResponse(
             service_name=service_name,
-            direct_dependencies=dependency_document.get("depends_on", []),
+            direct_dependencies=direct_dependencies,
             downstream_services=downstream_services,
+            impact_summary=self._build_impact_summary(service_name, direct_dependencies, downstream_services),
+            impact_details=impact_details,
+        )
+
+    def _build_reverse_graph(self) -> dict[str, list[str]]:
+        graph: dict[str, list[str]] = {}
+        for document in self.dependency_collection.find():
+            service_name = document["service_name"]
+            for dependency_name in document.get("depends_on", []):
+                graph.setdefault(dependency_name, []).append(service_name)
+        for dependents in graph.values():
+            dependents.sort()
+        return graph
+
+    def _build_downstream_paths(self, service_name: str, reverse_graph: dict[str, list[str]]) -> dict[str, list[str]]:
+        queue: list[tuple[str, list[str]]] = [(service_name, [service_name])]
+        visited = {service_name}
+        paths: dict[str, list[str]] = {}
+
+        while queue:
+            current, path = queue.pop(0)
+            for dependent in reverse_graph.get(current, []):
+                if dependent in visited:
+                    continue
+                visited.add(dependent)
+                next_path = [*path, dependent]
+                paths[dependent] = next_path
+                queue.append((dependent, next_path))
+        return paths
+
+    @staticmethod
+    def _build_downstream_explanation(path: list[str]) -> str:
+        downstream_service = path[-1]
+        dependency_chain = list(reversed(path))
+        if len(dependency_chain) == 2:
+            return f"{downstream_service} is impacted because it directly depends on {dependency_chain[1]}."
+        chain_text = ", which depends on ".join(dependency_chain[1:])
+        return f"{downstream_service} is impacted because it depends on {chain_text}."
+
+    @staticmethod
+    def _build_impact_summary(service_name: str, direct_dependencies: list[str], downstream_services: list[str]) -> str:
+        dependency_count = len(direct_dependencies)
+        downstream_count = len(downstream_services)
+        return (
+            f"{service_name} depends on {dependency_count} service(s) and has "
+            f"{downstream_count} downstream impacted service(s)."
         )
 
     def _ensure_service_exists(self, service_name: str) -> None:

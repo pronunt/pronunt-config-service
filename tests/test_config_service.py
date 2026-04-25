@@ -126,6 +126,11 @@ def test_impact_returns_direct_and_downstream_services() -> None:
     assert impact.service_name == "pronunt-worker-service"
     assert impact.direct_dependencies == ["pronunt-aggregator-service"]
     assert impact.downstream_services == ["pronunt-frontend-service"]
+    assert impact.impact_summary == "pronunt-worker-service depends on 1 service(s) and has 1 downstream impacted service(s)."
+    assert len(impact.impact_details) == 2
+    assert impact.impact_details[0].service_name == "pronunt-aggregator-service"
+    assert impact.impact_details[1].service_name == "pronunt-frontend-service"
+    assert "depends on pronunt-worker-service" in impact.impact_details[1].explanation
 
 
 def test_import_graph_creates_services_and_dependencies() -> None:

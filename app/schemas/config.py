@@ -50,7 +50,21 @@ class DependencyResponse(BaseModel):
     depends_on: list[str]
 
 
+class ImpactDirection(str, Enum):
+    dependency = "dependency"
+    downstream = "downstream"
+
+
+class ImpactDetailResponse(BaseModel):
+    service_name: str
+    relationship: ImpactDirection
+    path: list[str] = Field(default_factory=list)
+    explanation: str
+
+
 class ImpactResponse(BaseModel):
     service_name: str
     direct_dependencies: list[str]
     downstream_services: list[str]
+    impact_summary: str
+    impact_details: list[ImpactDetailResponse] = Field(default_factory=list)
