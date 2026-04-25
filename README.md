@@ -14,3 +14,4 @@ Provides repo mapping, dependency graph, and service criticality data.
 
 This repository follows trunk-based development with `main` as the long-lived branch.
 
+CI note: merged PRs should carry the `build` label when image publication is expected.
