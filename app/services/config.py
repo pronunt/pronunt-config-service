@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import Depends, status
 from pymongo import ASCENDING
 from pymongo.collection import Collection
@@ -19,6 +21,8 @@ from app.schemas.config import (
     ServiceConfigResponse,
     ServiceConfigUpsertRequest,
 )
+
+SettingsDependency = Annotated[Settings, Depends(get_settings)]
 
 SERVICE_NOT_FOUND_CODE = "service_not_found"
 SERVICE_NOT_FOUND_MESSAGE = "Service configuration was not found."
@@ -195,7 +199,7 @@ class ConfigService:
 
 
 def get_config_service(
-    settings: Settings = Depends(get_settings),
+    settings: SettingsDependency,
 ) -> ConfigService:
     return ConfigService(
         service_collection=get_service_collection(settings),
