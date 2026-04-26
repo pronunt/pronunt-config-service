@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     mongodb_database: str = "pronunt"
     mongodb_service_collection: str = "config_services"
     mongodb_dependency_collection: str = "config_dependencies"
+    auth_service_url: str = "http://pronunt-auth-service:8000"
+    internal_service_token: str | None = None
 
     auth_enabled: bool = False
     allow_unsafe_dev_auth: bool = True
@@ -41,6 +43,8 @@ class Settings(BaseSettings):
             errors.append("MONGODB_SERVICE_COLLECTION is required.")
         if not self.mongodb_dependency_collection:
             errors.append("MONGODB_DEPENDENCY_COLLECTION is required.")
+        if not self.auth_service_url:
+            errors.append("AUTH_SERVICE_URL is required.")
 
         if self.auth_enabled:
             if not self.keycloak_issuer:
